@@ -285,7 +285,7 @@ class GoogleAuthenticatorTest extends TestCase
      */
     public function testGetCodeWithBadSecret(string $secret)
     {
-        $this->expectException(Exception::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Could not decode secret');
 
         $code = $this->googleAuthenticator->getCode($secret);

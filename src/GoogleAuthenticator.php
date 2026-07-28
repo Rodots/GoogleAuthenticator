@@ -26,7 +26,8 @@ class GoogleAuthenticator
      * Create new secret.
      * Defaults to 32 characters (160 bits), randomly chosen from the allowed base32 characters.
      *
-     * @throws Exception
+     * @throws InvalidArgumentException if the requested length is out of the 26-128 range
+     * @throws Exception if no source of secure randomness is available
      */
     public function createSecret(int $secretLength = 32) : string
     {
@@ -47,7 +48,7 @@ class GoogleAuthenticator
     /**
      * Calculate the code, with given secret and point in time
      *
-     * @throws Exception
+     * @throws InvalidArgumentException if the secret is not valid base32 or is shorter than 128 bits
      */
     public function getCode(string $secret, ?int $timeSlice = null) : string
     {
@@ -57,7 +58,7 @@ class GoogleAuthenticator
 
         $secretkey = Base32::decode($secret);
         if ($secretkey === null || $secretkey === '') {
-            throw new Exception('Could not decode secret');
+            throw new InvalidArgumentException('Could not decode secret');
         }
 
         // RFC 4226: the shared secret MUST be at least 128 bits (16 bytes).
