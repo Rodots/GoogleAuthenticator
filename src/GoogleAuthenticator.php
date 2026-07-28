@@ -63,7 +63,7 @@ class GoogleAuthenticator
         }
 
         $secretkey = Base32::decode($secret);
-        if (empty($secretkey)) {
+        if ($secretkey === null || $secretkey === '') {
             throw new Exception('Could not decode secret');
         }
 
