@@ -98,6 +98,18 @@ Checking Code '848634' and Secret 'OQB6ZZGYHCPSX4AK':
 OK
 ```
 
+Security notes:
+---------------
+
+- The QR code data URI returned by `getQRCodeUrl()` embeds the shared secret in plain text. Treat it like a
+  password: never write it to logs or caches, never serve it through a CDN, and only deliver it over HTTPS
+  during enrollment.
+- Secrets shorter than 128 bits are rejected (`InvalidArgumentException`), and `createSecret()` accepts
+  lengths of 26-128 base32 characters (see "Breaking changes" above).
+- `verifyCode()` compares codes in constant time (`hash_equals`), validates the code format, and caps the
+  allowed clock drift at 60 time slices. Use its `$matchedTimeSlice` parameter to implement replay protection
+  (see "Preventing replay attacks" above), and rate-limit verification attempts at the application level.
+
 Installation:
 -------------
 
