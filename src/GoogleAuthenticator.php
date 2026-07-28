@@ -35,11 +35,12 @@ class GoogleAuthenticator
             throw new Exception('Bad secret length');
         }
 
-        // Each base32 character encodes 5 bits, so an N-character secret needs N * 5 / 8 bytes.
-        $rnd = random_bytes(intdiv($secretLength * 5, 8));
+        // Each base32 character encodes 5 bits. Round the byte count up so we always have enough
+        // entropy to fill the requested number of characters, then trim to the exact length.
+        $rnd = random_bytes((int) ceil($secretLength * 5 / 8));
 
-        // Strip padding so the secret is a clean base32 string.
-        return rtrim(Base32::encode($rnd), '=');
+        // Strip padding so the secret is a clean base32 string, then trim to the requested length.
+        return substr(rtrim(Base32::encode($rnd), '='), 0, $secretLength);
     }
 
     /**

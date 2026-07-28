@@ -38,9 +38,11 @@ class GoogleAuthenticatorTest extends TestCase
 
     public function secretLengthProvider()
     {
-        return [
-            range(0, 200)
-        ];
+        $cases = [];
+        foreach (range(0, 200) as $length) {
+            $cases["length {$length}"] = [$length];
+        }
+        return $cases;
     }
 
     /**
