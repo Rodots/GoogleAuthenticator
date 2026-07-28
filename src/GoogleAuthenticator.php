@@ -59,7 +59,7 @@ class GoogleAuthenticator
     public function getCode(string $secret, ?int $timeSlice = null) : string
     {
         if ($timeSlice === null) {
-            $timeSlice = floor(time() / 30);
+            $timeSlice = (int) floor(time() / 30);
         }
 
         $secretkey = Base32::decode($secret);
@@ -84,7 +84,7 @@ class GoogleAuthenticator
 
         $modulo = pow(10, $this->_codeLength);
 
-        return str_pad($value % $modulo, $this->_codeLength, '0', STR_PAD_LEFT);
+        return str_pad((string) ($value % $modulo), $this->_codeLength, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -149,7 +149,7 @@ class GoogleAuthenticator
             throw new InvalidArgumentException('Discrepancy must be between 0 and 60 time slices');
         }
 
-        $currentTimeSlice = floor(time() / 30);
+        $currentTimeSlice = (int) floor(time() / 30);
 
         if (strlen($code) !== $this->_codeLength || !ctype_digit($code)) {
             return false;
@@ -163,7 +163,7 @@ class GoogleAuthenticator
             }
 
             if (hash_equals($calculatedCode, $code)) {
-                $matchedTimeSlice = (int) ($currentTimeSlice + $i);
+                $matchedTimeSlice = $currentTimeSlice + $i;
                 return true;
             }
         }
