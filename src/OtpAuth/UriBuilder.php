@@ -122,6 +122,8 @@ class UriBuilder
             throw new DomainException("Period parameter does not apply to HOTP");
         }
 
+        // Keep any parameter that is set; a plain array_filter would drop counter=0,
+        // which is a perfectly valid initial HOTP counter value.
         $params = array_filter([
             'secret'    => $this->secret,
             'issuer'    => $this->issuer,
@@ -129,7 +131,7 @@ class UriBuilder
             'digits'    => $this->digits,
             'counter'   => $this->counter,
             'period'    => $this->period,
-        ]);
+        ], fn($v) => $v !== null && $v !== '');
 
         return sprintf(
             "%s://%s/%s?%s",

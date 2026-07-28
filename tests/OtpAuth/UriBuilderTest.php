@@ -69,7 +69,7 @@ class UriBuilderTest extends TestCase
                     ->account("bob")
                     ->secret("JBSWY3DPEHPK3PXP")
                     ->counter(0),
-                "otpauth://hotp/bob?secret=JBSWY3DPEHPK3PXP",
+                "otpauth://hotp/bob?secret=JBSWY3DPEHPK3PXP&counter=0",
             ],
             'TOTP, raw secret base32-encoded' => [
                 (new UriBuilder())
