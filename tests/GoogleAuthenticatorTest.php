@@ -202,9 +202,9 @@ class GoogleAuthenticatorTest extends TestCase
     {
         $builder = $this->googleAuthenticator->getUriBuilder()
             ->account("foo")
-            ->secret("bar");
+            ->secret("JBSWY3DPEHPK3PXP");
 
-        $this->assertEquals("otpauth://totp/foo?secret=bar", "$builder");
+        $this->assertEquals("otpauth://totp/foo?secret=JBSWY3DPEHPK3PXP", "$builder");
     }
 
     /**

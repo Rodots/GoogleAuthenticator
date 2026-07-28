@@ -108,6 +108,44 @@ class UriBuilderTest extends TestCase
         $this->assertNotNull(Base32::decode($query['secret']));
     }
 
+    /**
+     * Raw secrets that are not valid base32 must be rejected, otherwise crafted values
+     * could inject or override otpauth URI query parameters (e.g. a fake issuer).
+     */
+    public function invalidRawSecretProvider(): array
+    {
+        return [
+            'query parameter injection' => ['X&issuer=Evil'],
+            'lowercase'                 => ['bar'],
+            'empty'                     => [''],
+            'space'                     => ['JBSWY 3DP'],
+        ];
+    }
+
+    /**
+     * @dataProvider invalidRawSecretProvider
+     */
+    public function testRawSecretMustBeValidBase32(string $secret): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Secret must be base32-encoded");
+        (new UriBuilder())->secret($secret);
+    }
+
+    /**
+     * All query parameter values are URL-encoded, so even encoded secrets containing
+     * padding cannot break out of their parameter position.
+     */
+    public function testQueryParameterValuesAreUrlEncoded(): void
+    {
+        $uri = (string)(new UriBuilder())
+            ->account("alice")
+            ->issuer("A&B=C")
+            ->secret("MZXW6===");
+
+        $this->assertEquals("otpauth://totp/A%26B%3DC:%20alice?secret=MZXW6%3D%3D%3D&issuer=A%26B%3DC", $uri);
+    }
+
     public function testInvalidType()
     {
         $this->expectException(\TypeError::class);

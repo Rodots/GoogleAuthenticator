@@ -42,9 +42,13 @@ class UriBuilder
      * @param string $secret
      * @param bool $encode If true, also base32 encode the secret
      * @return $this
+     * @throws InvalidArgumentException If a raw secret is not a valid base32 string
      */
     public function secret(string $secret, bool $encode = false): self
     {
+        if (!$encode && !preg_match('/^[A-Z2-7]+=*$/', $secret)) {
+            throw new InvalidArgumentException("Secret must be base32-encoded");
+        }
         $this->secret = $encode ? Base32::encode($secret) : $secret;
         return $this;
     }
@@ -120,7 +124,7 @@ class UriBuilder
 
         $params = array_filter([
             'secret'    => $this->secret,
-            'issuer'    => empty($this->issuer) ? $this->issuer : rawurlencode($this->issuer),
+            'issuer'    => $this->issuer,
             'algorithm' => $this->algorithm?->value,
             'digits'    => $this->digits,
             'counter'   => $this->counter,
@@ -132,7 +136,7 @@ class UriBuilder
             self::SCHEME,
             $this->type->value,
             (empty($this->issuer) ? "" : (rawurlencode($this->issuer) . ":%20")) . rawurlencode($this->account),
-            implode('&', array_map(fn($k, $v) => "$k=$v", array_keys($params), array_values($params)))
+            implode('&', array_map(fn($k, $v) => $k . '=' . rawurlencode((string)$v), array_keys($params), array_values($params)))
         );
     }
 
