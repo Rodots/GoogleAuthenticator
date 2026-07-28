@@ -13,6 +13,15 @@ This is a fork of https://github.com/PHPGangsta/GoogleAuthenticator with the fol
 - Augmented test coverage to 100%
 - Bumped minimum PHP version to 8.2
 
+Breaking changes:
+-----------------
+
+As of this version, RFC 4226 is enforced strictly:
+
+- `getCode()` and `verifyCode()` reject any secret shorter than 128 bits (16 bytes / 26 base32 characters).
+  Legacy short secrets such as `SECRET` are no longer accepted; re-enroll affected users with a new secret.
+- `createSecret()` now defaults to 32 characters (160 bits) and only accepts a requested length of 26-128 characters.
+
 Original License:
 -----------------
 

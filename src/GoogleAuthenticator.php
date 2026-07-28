@@ -24,15 +24,16 @@ class GoogleAuthenticator
 
     /**
      * Create new secret.
-     * 16 characters, randomly chosen from the allowed base32 characters.
+     * Defaults to 32 characters (160 bits), randomly chosen from the allowed base32 characters.
      *
      * @throws Exception
      */
-    public function createSecret(int $secretLength = 16) : string
+    public function createSecret(int $secretLength = 32) : string
     {
-        // Valid secret lengths are 80 to 640 bits
-        if ($secretLength < 16 || $secretLength > 128) {
-            throw new Exception('Bad secret length');
+        // RFC 4226 requires a shared secret of at least 128 bits; cap at 640 bits.
+        // 26 base32 characters encode 128 bits, 128 characters encode 640 bits.
+        if ($secretLength < 26 || $secretLength > 128) {
+            throw new InvalidArgumentException('Bad secret length');
         }
 
         // Each base32 character encodes 5 bits. Round the byte count up so we always have enough
@@ -57,6 +58,11 @@ class GoogleAuthenticator
         $secretkey = Base32::decode($secret);
         if ($secretkey === null || $secretkey === '') {
             throw new Exception('Could not decode secret');
+        }
+
+        // RFC 4226: the shared secret MUST be at least 128 bits (16 bytes).
+        if (strlen($secretkey) < 16) {
+            throw new InvalidArgumentException('Secret must be at least 128 bits');
         }
 
         // Pack time into binary string

@@ -10,6 +10,12 @@ use Vectorface\OtpAuth\Parameters\Algorithm;
 
 class GoogleAuthenticatorTest extends TestCase
 {
+    /**
+     * A valid 26-character (128-bit) base32 test secret.
+     * TOTP vectors for it are cross-checked against an independent RFC 6238 implementation.
+     */
+    private const TEST_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEH';
+
     /* @var GoogleAuthenticator $googleAuthenticator */
     protected $googleAuthenticator;
 
@@ -28,12 +34,12 @@ class GoogleAuthenticatorTest extends TestCase
     /**
      * @throws Exception
      */
-    public function testCreateSecretDefaultsToSixteenCharacters()
+    public function testCreateSecretDefaultsToThirtyTwoCharacters()
     {
         $ga = $this->googleAuthenticator;
         $secret = $ga->createSecret();
 
-        $this->assertEquals(16, strlen($secret));
+        $this->assertEquals(32, strlen($secret));
     }
 
     public function secretLengthProvider()
@@ -54,8 +60,8 @@ class GoogleAuthenticatorTest extends TestCase
     {
         $ga = $this->googleAuthenticator;
 
-        if ($secretLength < 16 || $secretLength > 128) {
-            $this->expectException(Exception::class);
+        if ($secretLength < 26 || $secretLength > 128) {
+            $this->expectException(InvalidArgumentException::class);
             $this->expectExceptionMessage('Bad secret length');
         }
 
@@ -77,16 +83,12 @@ class GoogleAuthenticatorTest extends TestCase
             'RFC6238 T=66666666' => ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', 66666666, '279037', true],
             'RFC6238 wrong code' => ['GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', 1, '000000', false],
 
-            // A 16-character secret (the default createSecret() length).
-            'short secret @0'    => ['JBSWY3DPEHPK3PXP', 0, '282760', true],
-            'short secret @1'    => ['JBSWY3DPEHPK3PXP', 1, '996554', true],
-            'short secret @1e6'  => ['JBSWY3DPEHPK3PXP', 1000000, '041374', true],
-
-            // Original SECRET vectors, corrected to RFC-compliant values (6 chars decodes to 3 bytes).
-            'SECRET @0'          => ['SECRET', 0, '857148', true],
-            'SECRET @1385909245' => ['SECRET', 1385909245, '979377', true],
-            'SECRET @1378934578' => ['SECRET', 1378934578, '560773', true],
-            'SECRET wrong code'  => ['SECRET', 1378934578, '000000', false],
+            // A 26-character (128-bit) secret, the minimum allowed length. Expected codes
+            // are cross-checked against an independent RFC 6238 implementation.
+            'min secret @0'      => [self::TEST_SECRET, 0, '154113', true],
+            'min secret @1'      => [self::TEST_SECRET, 1, '744635', true],
+            'min secret @1e6'    => [self::TEST_SECRET, 1000000, '353333', true],
+            'min secret wrong'   => [self::TEST_SECRET, 1000000, '000000', false],
         ];
     }
 
@@ -114,7 +116,7 @@ class GoogleAuthenticatorTest extends TestCase
      */
     public function testGetQRCodeUrl()
     {
-        $secret = 'SECRET';
+        $secret = self::TEST_SECRET;
         $name = 'Test';
         $url = $this->googleAuthenticator->getQRCodeUrl($name, $secret);
 
@@ -131,7 +133,7 @@ class GoogleAuthenticatorTest extends TestCase
     public function testVerifyCode()
     {
         // Good result
-        $secret = 'SECRET';
+        $secret = self::TEST_SECRET;
         $code = $this->googleAuthenticator->getCode($secret);
         $result = $this->googleAuthenticator->verifyCode($secret, $code);
         $this->assertEquals(true, $result);
@@ -156,7 +158,7 @@ class GoogleAuthenticatorTest extends TestCase
      */
     public function testVerifyCodeWithLeadingZero()
     {
-        $secret = 'SECRET';
+        $secret = self::TEST_SECRET;
         $code = $this->googleAuthenticator->getCode($secret);
         $result = $this->googleAuthenticator->verifyCode($secret, $code);
         $this->assertEquals(true, $result);
@@ -171,7 +173,7 @@ class GoogleAuthenticatorTest extends TestCase
      */
     public function testVerifyCodeWithEightDigits()
     {
-        $secret = 'SECRET';
+        $secret = self::TEST_SECRET;
         $ga = $this->googleAuthenticator->setCodeLength(8);
 
         $code = $ga->getCode($secret);
@@ -187,7 +189,7 @@ class GoogleAuthenticatorTest extends TestCase
      */
     public function testVerifyCodeRejectsNonNumericCode()
     {
-        $secret = 'SECRET';
+        $secret = self::TEST_SECRET;
 
         $this->assertFalse($this->googleAuthenticator->verifyCode($secret, 'abcdef'));
         $this->assertFalse($this->googleAuthenticator->verifyCode($secret, '12345x'));
@@ -199,7 +201,7 @@ class GoogleAuthenticatorTest extends TestCase
      */
     public function testVerifyCodeReportsMatchedTimeSlice()
     {
-        $secret = 'SECRET';
+        $secret = self::TEST_SECRET;
         $currentTimeSlice = (int) floor(time() / 30);
 
         // A code from the previous time slice should match at $currentTimeSlice - 1
@@ -234,7 +236,7 @@ class GoogleAuthenticatorTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Discrepancy must be between 0 and 60 time slices');
 
-        $this->googleAuthenticator->verifyCode('SECRET', '123456', $discrepancy);
+        $this->googleAuthenticator->verifyCode(self::TEST_SECRET, '123456', $discrepancy);
     }
 
     public function testSetCodeLength()
@@ -288,6 +290,28 @@ class GoogleAuthenticatorTest extends TestCase
 
         $code = $this->googleAuthenticator->getCode($secret);
         $this->assertEquals('', $code);
+    }
+
+    public function shortSecretProvider()
+    {
+        return [
+            "3-byte (24-bit) secret" => ['SECRET'],
+            "10-byte (80-bit) secret" => ['JBSWY3DPEHPK3PXP'],
+            "15-byte (120-bit) secret" => ['JBSWY3DPEHPK3PXPJBSWY3DP'],
+        ];
+    }
+
+    /**
+     * @dataProvider shortSecretProvider
+     * @param string $secret
+     * @throws Exception
+     */
+    public function testGetCodeRejectsSecretsShorterThan128Bits(string $secret)
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Secret must be at least 128 bits');
+
+        $this->googleAuthenticator->getCode($secret);
     }
 
     /**
