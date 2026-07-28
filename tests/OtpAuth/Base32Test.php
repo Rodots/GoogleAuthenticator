@@ -82,6 +82,32 @@ class Base32Test extends TestCase
     }
 
     /**
+     * Padding is only valid as a trailing run of '=' characters. Interior padding
+     * would make encodings malleable (multiple representations of the same key).
+     */
+    public function nonTrailingPaddingProvider(): array
+    {
+        return [
+            'padding before data'        => ['===A==='],
+            'padding between characters' => ['MZ==XW6YTB'],
+            'padding at start'           => ['=MZXW6YTB'],
+        ];
+    }
+
+    /**
+     * @dataProvider nonTrailingPaddingProvider
+     */
+    public function testDecodeRejectsNonTrailingPadding(string $input): void
+    {
+        $this->assertNull(Base32::decode($input));
+    }
+
+    public function testDecodeAcceptsTrailingPaddingOnly(): void
+    {
+        $this->assertEquals('fooba', Base32::decode('MZXW6YTB========'));
+    }
+
+    /**
      * encode() then decode() must reproduce the original bytes for arbitrary binary input.
      */
     public function testRoundTripForBinaryData(): void

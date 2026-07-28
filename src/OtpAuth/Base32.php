@@ -47,12 +47,19 @@ class Base32
     }
 
     /**
-     * Decode a base32 (RFC 4648) string. Padding is optional. Returns null if the
-     * input contains any character outside the base32 alphabet.
+     * Decode a base32 (RFC 4648) string. Padding is optional, but may only appear as a
+     * trailing run of '=' characters. Returns null if the input contains any character
+     * outside the base32 alphabet or padding anywhere other than the end.
      */
     public static function decode(string $data): ?string
     {
         if (empty($data)) {
+            return null;
+        }
+
+        // Padding is only valid as a trailing run; reject '=' anywhere else.
+        $data = rtrim($data, self::CHARS[32]);
+        if (str_contains($data, self::CHARS[32])) {
             return null;
         }
 
@@ -62,9 +69,6 @@ class Base32
         $carry = 0;
         $bits = 0;
         foreach (str_split($data) as $c) {
-            if ($c === self::CHARS[32]) {
-                continue;
-            }
             if (!isset($map[$c])) {
                 return null;
             }
